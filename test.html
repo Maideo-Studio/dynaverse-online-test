@@ -1,138 +1,27 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>Simple Three.js Engine - Camera-Relative Movement with Jumping</title>
-    <style>
-        body { margin: 0; overflow: hidden; background: #2595f3; }
-        canvas { display: block; }
-    </style>
+  <title>Socket Game</title>
 </head>
 <body>
-    <!-- Link to the Three.js library from the official CDN [1] -->
-<script src="/socket.io/socket.io.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+  <input id="msg" placeholder="Type message">
+  <button onclick="send()">Send</button>
+  <div id="chat"></div>
 
-<script>
-    class SimpleEngine {
-        constructor() {
-            // ... (keep existing properties) ...
-            this.keys = {};
-            this.speed = 0.1;
-            this.rotationSpeed = 0.05;
-            this.cameraAngle = 0;
-            this.cameraDistance = 8;
-            this.cameraHeight = 4;
-            this.isJumping = false;
-            this.velocity_y = 0;
-            this.gravity = -0.05;
-            this.jumpStrength = 0.8;
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
 
-            // Multiplayer properties
-            this.socket = io(); 
-            this.remotePlayers = {}; // Stores meshes of other players
-
-            this.initScene();
-            this.initCamera();
-            this.initRenderer();
-            this.initLights();
-            this.initObjects();
-            this.initControls();
-            this.initSocket(); // Setup network listeners
-            this.addResizeListener();
-            this.animate();
-        }
-
-        // Helper to create a player model (Used for both local and remote)
-        createPlayerMesh(isLocal = false) {
-            const geometry = new THREE.BoxGeometry();
-            const loader = new THREE.TextureLoader();
-            const group = new THREE.Group();
-
-            const faceTexture = loader.load("https://raw.githubusercontent.com/Maideo-Studio/Dynaverse-faces/main/76baf281-4d65-4780-bbec-a7f7b27c9ae7.png");
-            faceTexture.magFilter = THREE.NearestFilter;
-
-            const color = isLocal ? 0xd524b0 : 0x24d543; // Local is pink, others are green
-
-            const headMaterials = [
-                new THREE.MeshStandardMaterial({ color: color }),
-                new THREE.MeshStandardMaterial({ color: color }),
-                new THREE.MeshStandardMaterial({ color: color }),
-                new THREE.MeshStandardMaterial({ color: color }),
-                new THREE.MeshStandardMaterial({ map: faceTexture, color: color }),
-                new THREE.MeshStandardMaterial({ color: color })
-            ];
-
-            const head = new THREE.Mesh(geometry, headMaterials);
-            head.scale.set(1.5, 1, 1);
-            group.add(head);
-
-            const body = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ color: 0x333333 }));
-            body.position.set(0, -0.8, 0);
-            body.scale.set(0.6, 0.6, 0.5);
-            group.add(body);
-
-            return group;
-        }
-
-        initObjects() {
-            // Setup Ground
-            const loader = new THREE.TextureLoader();
-            const groundTexture = loader.load("https://raw.githubusercontent.com/Maideo-Studio/Dynaverse-faces/main/roblox-stud%20(1).png");
-            groundTexture.wrapS = groundTexture.wrapT = THREE.RepeatWrapping;
-            groundTexture.repeat.set(100, 100);
-            const groundMat = new THREE.MeshStandardMaterial({ map: groundTexture });
-            this.ground = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), groundMat);
-            this.ground.rotation.x = -Math.PI / 2;
-            this.ground.position.y = -1.1;
-            this.scene.add(this.ground);
-
-            // Setup Local Player
-            this.player = this.createPlayerMesh(true);
-            this.player.position.y = 0.5;
-            this.scene.add(this.player);
-        }
-
-        initSocket() {
-            // Listen for other players
-            this.socket.on('playerUpdate', (data) => {
-                for (let id in data) {
-                    if (id === this.socket.id) continue; // Skip ourselves
-
-                    if (!this.remotePlayers[id]) {
-                        // Create new mesh for new player
-                        this.remotePlayers[id] = this.createPlayerMesh(false);
-                        this.scene.add(this.remotePlayers[id]);
-                    }
-
-                    // Update position and rotation
-                    this.remotePlayers[id].position.copy(data[id].pos);
-                    this.remotePlayers[id].rotation.copy(data[id].rot);
-                }
-            });
-
-            // Clean up disconnected players
-            this.socket.on('playerDisconnected', (id) => {
-                if (this.remotePlayers[id]) {
-                    this.scene.remove(this.remotePlayers[id]);
-                    delete this.remotePlayers[id];
-                }
-            });
-        }
-
-        updateMovement() {
-            // ... (Your existing movement logic here) ...
-            
-            // At the end of updateMovement, emit your position
-            this.socket.emit('move', {
-                pos: this.player.position,
-                rot: this.player.rotation
-            });
-        }
-        
-        // ... (Keep existing initScene, initCamera, initRenderer, initLights, initControls, animate, addResizeListener) ...
+    function send() {
+      const msg = document.getElementById("msg").value;
+      socket.emit("chat", msg);
     }
-    new SimpleEngine();
-</script>
+
+    socket.on("chat", (msg) => {
+      const div = document.createElement("div");
+      div.innerText = msg;
+      document.getElementById("chat").appendChild(div);
+    });
+  </script>
 </body>
 </html>
