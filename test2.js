@@ -1,28 +1,28 @@
 const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
+const path = require('path');
+
 const app = express();
-const http = require('http').Server(app);
-const io = require('socket.io')(http);
+const server = http.createServer(app);
+const io = new Server(server);
 
-app.use(express.static(__dirname)); // Serves your HTML file
-
-let players = {};
+app.use(express.static(path.join(__dirname, 'public')));
 
 io.on('connection', (socket) => {
-    console.log('User connected:', socket.id);
+  console.log('A user connected');
 
-    socket.on('move', (data) => {
-        players[socket.id] = data;
-        // Broadcast all player positions to everyone
-        io.emit('playerUpdate', players);
-    });
+  socket.on('chat message', (msg) => {
+    // This broadcasts the message to everyone, including the sender
+    io.emit('chat message', msg);
+  });
 
-    socket.on('disconnect', () => {
-        delete players[socket.id];
-        io.emit('playerDisconnected', socket.id);
-        console.log('User disconnected:', socket.id);
-    });
+  socket.on('disconnect', () => {
+    console.log('User disconnected');
+  });
 });
 
-http.listen(3000, () => {
-    console.log('Server running on http://localhost:3000');
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
